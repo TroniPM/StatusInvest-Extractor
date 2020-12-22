@@ -1,4 +1,5 @@
-var pontuacao = ","; // pode utilizar , ou .
+const PONTUACAO = "."; // pode utilizar , ou .
+const SEPARATOR = ","; //qualquer um desejado
 
 $("#indicators-section button[data-value=1]").click();
 
@@ -7,8 +8,8 @@ setTimeout(() => {
 
     setTimeout(() => {
         init();
-    }, 1 * 2000);
-}, 1 * 2000);
+    }, 1.5 * 1000);
+}, 1.5 * 1000);
 
 function formatText(text, spaceReplacement = "") {
     return text.toUpperCase().replaceAll(".", "").replaceAll("/", "_").replaceAll(" ", spaceReplacement)
@@ -60,7 +61,7 @@ function getIndicatorsData(div) {
                 let content = element.innerText.toUpperCase().trim().replace("%", "").replace(",", ".");
                 content = content == "-" || !content ? "0" : content;
 
-                response[keyTitle][index].data[title] = pontuacao == "," ? content.replace(".", ",") : parseFloat(content);
+                response[keyTitle][index].data[title] = typeof PONTUACAO !== 'undefined' && PONTUACAO == "," ? content.replace(".", ",") : parseFloat(content);
             }
         }
     }
@@ -89,29 +90,32 @@ function init() {
 
 function convertToCsv(tab1, tab2, tab3, tab4, tab5) {
     const anoLabel = "ANO";
-    const SEPARATOR = ";";
+    const tickerLabel = "TICKER";
+    const ticker = window.location.pathname.split("/")[2].toUpperCase();
 
     outputHeader = "";
     outputData = "";
 
-    outputHeader += anoLabel + SEPARATOR + "  ";
+    outputHeader += tickerLabel + SEPARATOR /*+ "  "*/;
+    outputHeader += anoLabel + SEPARATOR /*+ "  "*/;
 
     const arrModel = tab1.data[Object.keys(tab1.data)[0]];
     for (let index = 0; index < arrModel.length; index++) {
         const element = arrModel[index];
         const ano = element.ano;
 
-        outputData += ano + SEPARATOR + " ";
+        outputData += ticker + SEPARATOR /*+ " "*/;
+        outputData += ano + SEPARATOR /*+ " "*/;
 
         const keys = Object.keys(element.data);
         for (let i1 = 0; i1 < keys.length; i1++) {
             const key1 = keys[i1];
             if (index == 0) {
-                outputHeader += key1 + SEPARATOR + " ";
+                outputHeader += key1 + SEPARATOR /*+ " "*/;
             }
 
             outputData += element.data[key1];
-            outputData += SEPARATOR + " ";
+            outputData += SEPARATOR /*+ " "*/;
         }
 
         const t2 = mergeYear(SEPARATOR, tab2, index, outputHeader, outputData);
@@ -137,8 +141,8 @@ function convertToCsv(tab1, tab2, tab3, tab4, tab5) {
     console.log(outputHeader)
     console.log(outputData)
 
-    const fileContent = outputHeader + "\r\n" + outputData;
-    const ticker = window.location.pathname.split("/")[2];
+    var fileContent = outputHeader + "\r\n" + outputData;
+    fileContent = removeEndSeparator(fileContent);
     download("data_" + ticker + ".csv", fileContent)
 }
 
@@ -148,13 +152,17 @@ function mergeYear(SEPARATOR, tab, index, outputHeader, outputData) {
     for (let i2 = 0; i2 < keys2.length; i2++) {
         const key2 = keys2[i2];
         if (index == 0) {
-            outputHeader += key2 + SEPARATOR + " ";
+            outputHeader += key2 + SEPARATOR /*+ " "*/;
         }
         outputData += tabData.data[key2];
-        outputData += SEPARATOR + " ";
+        outputData += SEPARATOR /*+ " "*/;
     }
 
     return { outputHeader, outputData };
+}
+
+function removeEndSeparator(fileContent) {
+    return fileContent.replaceAll(",\r\n", "\r\n");
 }
 
 function download(filename, text) {
