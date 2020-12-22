@@ -1,87 +1,179 @@
-const Browser = require("zombie");
-const browser = new Browser();
+const PONTUACAO = "."; // pode utilizar , ou .
+const SEPARATOR = ","; //qualquer um desejado
 
-const getIndicadoresValuation = () => {
-    console.log('getIndicadoresValuation');
-    const divIndicadoresValuation = browser.querySelectorAll(".indicator-historical-container div[data-group]")[0];
-    console.log(divIndicadoresValuation);
-};
+$("#indicators-section button[data-value=1]").click();
 
-const getIndicadoresEndividamento = () => {
-    console.log('getIndicadoresEndividamento');
-    const divIndicadoresEndividamento = browser.querySelectorAll(".indicator-historical-container div[data-group]")[1];
-};
+setTimeout(() => {
+    document.querySelector("#indicators-section").querySelectorAll("a[role=button]")[1].click()
 
-const getIndicadoresEficiencia = () => {
-    console.log('getIndicadoresEficiencia');
-    const divIndicadoresEficiencia = browser.querySelectorAll(".indicator-historical-container div[data-group]")[2];
-};
+    setTimeout(() => {
+        init();
+    }, 1.5 * 1000);
+}, 1.5 * 1000);
 
-const getIndicadoresRentabilidade = () => {
-    console.log('getIndicadoresRentabilidade');
-    const divIndicadoresRentabilidade = browser.querySelectorAll(".indicator-historical-container div[data-group]")[3];
-};
+function formatText(text, spaceReplacement = "") {
+    return text.toUpperCase().replaceAll(".", "").replaceAll("/", "_").replaceAll(" ", spaceReplacement)
+        .replaceAll("Á", "A").replaceAll("Ã", "A").replaceAll("À", "A").replaceAll("Â", "A")
+        .replaceAll("É", "E").replaceAll("È", "E").replaceAll("Ê", "E")
+        .replaceAll("Í", "I").replaceAll("Ì", "I").replaceAll("Î", "I")
+        .replaceAll("Ó", "O").replaceAll("Õ", "O").replaceAll("Ò", "O").replaceAll("Ô", "O")
+        .replaceAll("Ú", "U").replaceAll("Ù", "U").replaceAll("Û", "U")
+        .replaceAll("Ç", "C").replaceAll("º", "").replaceAll("ª", "");
+}
 
-const getIndicadoresCrescimento = () => {
-    console.log('getIndicadoresCrescimento');
-    const divIndicadoresCrescimento = browser.querySelectorAll(".indicator-historical-container div[data-group]")[4];
-};
-
-const clickBotaoHistoricoMaximoPeriodo = () => {
-    console.log('clickBotaoHistoricoMaximoPeriodo');
-    const delay = "2s";
-    const historicoMaxBtn = browser.querySelectorAll(".indicator-historical-container a[role=button]")[1];
-    if (historicoMaxBtn) {
-        historicoMaxBtn.click() && browser.wait(delay).then(() => {
-            getIndicadoresValuation(browser);
-            getIndicadoresEndividamento(browser);
-            getIndicadoresEficiencia(browser);
-            getIndicadoresRentabilidade(browser);
-            getIndicadoresCrescimento(browser);
-        });
+function jsonConcat(o1, o2) {
+    for (var key in o2) {
+        o1[key] = o2[key];
     }
-};
+    return o1;
+}
 
-const clickBotaoHistorico = () => {
-    console.log('clickBotaoHistorico');
-    const delay = "2s";
-    const historicoBtn = browser.button("#indicators-section [data-value=1]");
-    if (historicoBtn) {
-        historicoBtn.click() && browser.wait(delay).then(() => {
-            clickBotaoHistoricoMaximoPeriodo(browser);
-        });
-    } else {
-        console.error('Botao clickBotaoHistorico não encontrado');
+function getIndicatorsData(div) {
+    const rowContainerOutter = div.querySelectorAll(".tr.w-100.d-flex.justify-start");
+    const indicadorContainerOutter = div.querySelectorAll(".indicador")
+
+    const qtdLinhas = rowContainerOutter.length || indicadorContainerOutter.length;
+
+    const response = [];
+    let keyTitle;
+    for (let linhaIndex = 0; linhaIndex < qtdLinhas; linhaIndex++) {
+        const indicadorContainer = indicadorContainerOutter[linhaIndex] || null;
+        const rowContainer = rowContainerOutter[linhaIndex] || null;
+
+        if (linhaIndex == 0) {
+            const title = indicadorContainer.querySelector(".indicador-name").innerText.trim();
+            keyTitle = formatText(title, "_");
+            const celulas = rowContainer.querySelectorAll(".th.w-100");
+
+            response[keyTitle] = [];
+
+            for (let i = 0; i < celulas.length; i++) {
+                const element = celulas[i].innerText.trim();
+
+                response[keyTitle].push({ ano: element, data: {} });
+            }
+        } else {
+            const title = formatText(indicadorContainer.querySelector(".title").innerText.trim());
+
+            const arr = rowContainer.querySelectorAll(".td.w-100");
+            for (let index = 0; index < arr.length; index++) {
+                const element = arr[index];
+                let content = element.innerText.toUpperCase().trim().replace("%", "").replace(",", ".");
+                content = content == "-" || !content ? "0" : content;
+
+                response[keyTitle][index].data[title] = typeof PONTUACAO !== 'undefined' && PONTUACAO == "," ? content.replace(".", ",") : parseFloat(content);
+            }
+        }
     }
-};
 
-const openStatusInvest = ticker => {
-    console.log('openStatusInvest');
-    if (!ticker) {
-        return Promise.reject({ msg: "ticker inválido" });
+    return { data: response, keyTitle };
+}
+
+function init() {
+    const tab1 = getIndicatorsData(document.querySelectorAll(".indicator-historical-container div[data-group]")[0]);
+    const tab2 = getIndicatorsData(document.querySelectorAll(".indicator-historical-container div[data-group]")[1]);
+    const tab3 = getIndicatorsData(document.querySelectorAll(".indicator-historical-container div[data-group]")[2]);
+    const tab4 = getIndicatorsData(document.querySelectorAll(".indicator-historical-container div[data-group]")[3]);
+    const tab5 = getIndicatorsData(document.querySelectorAll(".indicator-historical-container div[data-group]")[4]);
+
+    var json = {};
+    json = Object.assign(json, tab1.data);
+    json = Object.assign(json, tab2.data);
+    json = Object.assign(json, tab3.data);
+    json = Object.assign(json, tab4.data);
+    json = Object.assign(json, tab5.data);
+
+    console.log(json);
+
+    convertToCsv(tab1, tab2, tab3, tab4, tab5);
+}
+
+function convertToCsv(tab1, tab2, tab3, tab4, tab5) {
+    const anoLabel = "ANO";
+    const tickerLabel = "TICKER";
+    const ticker = window.location.pathname.split("/")[2].toUpperCase();
+
+    outputHeader = "";
+    outputData = "";
+
+    outputHeader += tickerLabel + SEPARATOR /*+ "  "*/;
+    outputHeader += anoLabel + SEPARATOR /*+ "  "*/;
+
+    const arrModel = tab1.data[Object.keys(tab1.data)[0]];
+    for (let index = 0; index < arrModel.length; index++) {
+        const element = arrModel[index];
+        const ano = element.ano;
+
+        outputData += ticker + SEPARATOR /*+ " "*/;
+        outputData += ano + SEPARATOR /*+ " "*/;
+
+        const keys = Object.keys(element.data);
+        for (let i1 = 0; i1 < keys.length; i1++) {
+            const key1 = keys[i1];
+            if (index == 0) {
+                outputHeader += key1 + SEPARATOR /*+ " "*/;
+            }
+
+            outputData += element.data[key1];
+            outputData += SEPARATOR /*+ " "*/;
+        }
+
+        const t2 = mergeYear(SEPARATOR, tab2, index, outputHeader, outputData);
+        outputHeader = t2.outputHeader;
+        outputData = t2.outputData;
+
+        const t3 = mergeYear(SEPARATOR, tab3, index, outputHeader, outputData);
+        outputHeader = t3.outputHeader;
+        outputData = t3.outputData;
+
+        const t4 = mergeYear(SEPARATOR, tab4, index, outputHeader, outputData);
+        outputHeader = t4.outputHeader;
+        outputData = t4.outputData;
+
+        const t5 = mergeYear(SEPARATOR, tab5, index, outputHeader, outputData);
+        outputHeader = t5.outputHeader;
+        outputData = t5.outputData;
+
+
+        outputData += "\r\n";
     }
 
-    const url = "https://statusinvest.com.br/acoes/" + ticker.toLocaleLowerCase();
-    // const url = "http://jpcontabil.com/";
+    console.log(outputHeader)
+    console.log(outputData)
 
-    return browser.visit(url)
-        .then(() => {
-            console.log("SUCCESS OPEN STOCK DATA", browser.location.href);
-            clickBotaoHistorico(browser);
-        })
-        .catch(err => {
-            console.log("ERROR WHILE OPEN STOCK DATA", err);
-        });
+    var fileContent = outputHeader + "\r\n" + outputData;
+    fileContent = removeEndSeparator(fileContent);
+    download("data_" + ticker + ".csv", fileContent)
+}
 
-};
+function mergeYear(SEPARATOR, tab, index, outputHeader, outputData) {
+    const tabData = tab.data[Object.keys(tab.data)[0]][index];
+    const keys2 = Object.keys(tabData.data);
+    for (let i2 = 0; i2 < keys2.length; i2++) {
+        const key2 = keys2[i2];
+        if (index == 0) {
+            outputHeader += key2 + SEPARATOR /*+ " "*/;
+        }
+        outputData += tabData.data[key2];
+        outputData += SEPARATOR /*+ " "*/;
+    }
 
-const acao = "cogn3";
-openStatusInvest(acao).catch(() => {
-    browser.window.addEventListener('load', function () {
-        (adsbygoogle = window.adsbygoogle || []).push({});
-    });
-    openStatusInvest(acao).finally(() => {
-        console.log("ACABOU!");
-        process.exit(1);
-    });
-});
+    return { outputHeader, outputData };
+}
+
+function removeEndSeparator(fileContent) {
+    return fileContent.replaceAll(",\r\n", "\r\n");
+}
+
+function download(filename, text) {
+    var element = document.createElement('a');
+    element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+    element.setAttribute('download', filename);
+
+    element.style.display = 'none';
+    document.body.appendChild(element);
+
+    element.click();
+
+    document.body.removeChild(element);
+}
