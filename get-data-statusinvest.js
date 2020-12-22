@@ -1,16 +1,6 @@
 const PONTUACAO = "."; // pode utilizar , ou .
 const SEPARATOR = ","; //qualquer um desejado
 
-$("#indicators-section button[data-value=1]").click();
-
-setTimeout(() => {
-    document.querySelector("#indicators-section").querySelectorAll("a[role=button]")[1].click()
-
-    setTimeout(() => {
-        init();
-    }, 1.5 * 1000);
-}, 1.5 * 1000);
-
 function formatText(text, spaceReplacement = "") {
     return text.toUpperCase().replaceAll(".", "").replaceAll("/", "_").replaceAll(" ", spaceReplacement)
         .replaceAll("Á", "A").replaceAll("Ã", "A").replaceAll("À", "A").replaceAll("Â", "A")
@@ -61,7 +51,7 @@ function getIndicatorsData(div) {
                 let content = element.innerText.toUpperCase().trim().replace("%", "").replace(",", ".");
                 content = content == "-" || !content ? "0" : content;
 
-                response[keyTitle][index].data[title] = typeof PONTUACAO !== 'undefined' && PONTUACAO == "," ? content.replace(".", ",") : parseFloat(content);
+                response[keyTitle][index].data[title] = typeof PONTUACAO !== 'undefined' && PONTUACAO == "," ? content.replace(".", "") : parseFloat(content);
             }
         }
     }
@@ -75,20 +65,21 @@ function init() {
     const tab3 = getIndicatorsData(document.querySelectorAll(".indicator-historical-container div[data-group]")[2]);
     const tab4 = getIndicatorsData(document.querySelectorAll(".indicator-historical-container div[data-group]")[3]);
     const tab5 = getIndicatorsData(document.querySelectorAll(".indicator-historical-container div[data-group]")[4]);
+    const tab6 = getDataDre();
 
-    var json = {};
-    json = Object.assign(json, tab1.data);
-    json = Object.assign(json, tab2.data);
-    json = Object.assign(json, tab3.data);
-    json = Object.assign(json, tab4.data);
-    json = Object.assign(json, tab5.data);
+    // var json = {};
+    // json = Object.assign(json, tab1.data);
+    // json = Object.assign(json, tab2.data);
+    // json = Object.assign(json, tab3.data);
+    // json = Object.assign(json, tab4.data);
+    // json = Object.assign(json, tab5.data);
+    // json = Object.assign(json, tab6.data);
+    // console.log(json);
 
-    console.log(json);
-
-    convertToCsv(tab1, tab2, tab3, tab4, tab5);
+    convertToCsv(tab1, tab2, tab3, tab4, tab5, tab6);
 }
 
-function convertToCsv(tab1, tab2, tab3, tab4, tab5) {
+function convertToCsv(tab1, tab2, tab3, tab4, tab5, tab6) {
     const anoLabel = "ANO";
     const tickerLabel = "TICKER";
     const ticker = window.location.pathname.split("/")[2].toUpperCase();
@@ -134,6 +125,10 @@ function convertToCsv(tab1, tab2, tab3, tab4, tab5) {
         outputHeader = t5.outputHeader;
         outputData = t5.outputData;
 
+        const t6 = mergeYear(SEPARATOR, tab6, index, outputHeader, outputData);
+        outputHeader = t6.outputHeader;
+        outputData = t6.outputData;
+
 
         outputData += "\r\n";
     }
@@ -177,3 +172,88 @@ function download(filename, text) {
 
     document.body.removeChild(element);
 }
+
+function getDataDre() {
+    const response = [];
+    const dreDiv = $('.DRE:eq(0)');
+
+    const anosContainer = dreDiv.find('table').find('th.DATA');
+    for (let index = 0; index < anosContainer.length; index++) {
+        let ano;
+        if (index == 0) {
+            ano = "ATUAL";
+        } else {
+            ano = anosContainer[index].innerText.trim();
+        }
+
+        response.push({ ano })
+    }
+
+    const rowContainer = dreDiv.find('table').find('tr');
+    for (let index = 1; index < rowContainer.length; index++) {//linha
+        const title = dreDiv.find('table').find('tr:eq(' + index + ')').find('td:eq(0)').find('span:eq(1)').text() ||
+            dreDiv.find('table').find('tr:eq(' + index + ')').find('td:eq(0)').find('span:eq(0)').text();
+        const key = formatText(title.replace("(R$)", "").replace("(%)", "").replace("-", "").trim());
+
+        const celulaContainer = $(rowContainer[index]).find('td.DATA');
+        for (let index2 = 0; index2 < celulaContainer.length; index2++) {//coluna
+            if (!response[index2].data) {
+                response[index2].data = {};
+            }
+            const element = celulaContainer[index2];
+            var content = element.innerText.toUpperCase().trim();
+
+            content = content.replace("%", "").replace(".", "").replace(",", ".").replace(" ", "");
+            content = content == "-" || !content ? "0" : content;
+            content = content == "0,00" || content == "0.00" || !content ? "0" : content;
+            if (content.toString().includes('M')) {
+                content = parseFloat(content.replace("M", "")) * 1000000;
+
+            }
+
+            response[index2].data[key] = typeof PONTUACAO !== 'undefined' && PONTUACAO == "," ? content.toString().replace(".", ",") : parseFloat(content);
+        }
+
+    }
+
+    return { data: { DRE: response }, keyTitle: "DRE" };
+}
+
+function dreScheme() {
+    setTimeout(() => {
+        const menuInicial = $('.DRE:eq(0)').find('.si-dropdown:eq(2)').find('input:eq(0)')[0];
+        const menuInicialId = menuInicial.getAttribute('data-target');
+        menuInicial.click();
+
+        setTimeout(() => {
+            const menuInicialBtn = $("#" + menuInicialId + " li:last-child");
+            menuInicialBtn.click();
+
+            setTimeout(() => {
+                const menuFinal = $('.DRE:eq(0)').find('.si-dropdown:eq(2)').find('input:eq(1)')[0];
+                const menuFinalId = menuFinal.getAttribute('data-target');
+                menuFinal.click();
+
+                setTimeout(() => {
+                    const menuFinalBtn = $("#" + menuFinalId + " li:first");
+                    menuFinalBtn.click();
+
+                    setTimeout(() => {
+                        $("#indicators-section button[data-value=1]").click();
+
+                        setTimeout(() => {
+                            document.querySelector("#indicators-section").querySelectorAll("a[role=button]")[1].click()
+
+                            setTimeout(() => {
+                                init();
+                            }, 1.5 * 1000);
+                        }, 1.5 * 1000);
+                    }, 1000);
+                }, 150);
+            }, 150);
+        }, 150);
+    }, 150);
+
+}
+
+dreScheme();
